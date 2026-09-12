@@ -81,7 +81,7 @@ code.zip        ZIP file containing your complete solution for submission.
 The blank template at `dataset/output.csv` is provided as a reference. Your final generated file must be the root-level `output.csv`.
 
 ---
-## 2. High-Level Flow
+## High-Level Flow
 
 ```mermaid
 flowchart TD

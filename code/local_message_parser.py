@@ -14,8 +14,9 @@ except ModuleNotFoundError:
 class LocalMessageParser:
     """Parse financial messages through a local Ollama model with JSON caching."""
 
-    def __init__(self, cache_path: Path = MESSAGE_CACHE):
+    def __init__(self, cache_path: Path = MESSAGE_CACHE, tracker=None):
         self.cache_path = cache_path
+        self.tracker = tracker
         self.model = os.getenv("LOCAL_LLM_MODEL", "llama3.2")
         self.endpoint = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434/api/generate")
         self.cache = self._load_cache()
@@ -78,13 +79,21 @@ Messages:
             "prompt": prompt,
             "stream": False,
             "format": "json",
-            "options": {"temperature": 0}
+            "options": {"temperature": 0, "num_predict": 64},
+            "keep_alive": "10m",
         }).encode("utf-8")
 
         try:
             req = request.Request(self.endpoint, data=payload, headers={"Content-Type": "application/json"})
-            with request.urlopen(req, timeout=120) as response:
+            with request.urlopen(req, timeout=30) as response:
                 body = json.loads(response.read().decode("utf-8"))
+            if self.tracker is not None:
+                self.tracker.add_usage(
+                    int(body.get("prompt_eval_count", 0) or 0),
+                    int(body.get("eval_count", 0) or 0),
+                    model_name=self.model,
+                    provider="ollama",
+                )
             parsed = json.loads(body.get("response", "{}"))
             modifications = parsed.get("modifications", [])
             if not isinstance(modifications, list):

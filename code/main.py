@@ -51,7 +51,7 @@ def main():
     vision_ocr = VisionOCR()
     loader = DataLoader(image_extractor=vision_ocr)
     data = loader.load_all_data()
-    local_message_parser = LocalMessageParser()
+    local_message_parser = LocalMessageParser(tracker=tracker)
 
     forecaster = Forecaster(data["profiles"], data["events"])
     engine = DecisionEngine(forecaster)
@@ -68,13 +68,14 @@ def main():
                 (data["messages"]["user_id"] == user_id) &
                 (
                     data["messages"]["request_id"].eq(req["request_id"]) |
-                    data["messages"]["request_id"].isna() |
                     data["messages"]["related_event_id"].isin(user_events["event_id"])
                 )
             ]
             if not relevant_messages.empty:
                 message_text = "\n".join(relevant_messages["message_text"].astype(str))
-                events_context = user_events.to_json(orient="records", date_format="iso")
+                related_ids = set(relevant_messages["related_event_id"].dropna().astype(str))
+                message_events = user_events[user_events["event_id"].astype(str).isin(related_ids)]
+                events_context = message_events.to_json(orient="records", date_format="iso")
                 modifications = extractor.parse_messages(message_text, events_context)
                 user_events = _apply_event_modifications(user_events, modifications)
         elif local_message_parser.available:
@@ -82,13 +83,14 @@ def main():
                 (data["messages"]["user_id"] == user_id) &
                 (
                     data["messages"]["request_id"].eq(req["request_id"]) |
-                    data["messages"]["request_id"].isna() |
                     data["messages"]["related_event_id"].isin(user_events["event_id"])
                 )
             ]
             if not relevant_messages.empty:
                 message_text = "\n".join(relevant_messages["message_text"].astype(str))
-                events_context = user_events.to_json(orient="records", date_format="iso")
+                related_ids = set(relevant_messages["related_event_id"].dropna().astype(str))
+                message_events = user_events[user_events["event_id"].astype(str).isin(related_ids)]
+                events_context = message_events.to_json(orient="records", date_format="iso")
                 modifications = local_message_parser.parse(message_text, events_context)
                 user_events = _apply_event_modifications(user_events, modifications)
 
@@ -136,10 +138,18 @@ def _apply_event_modifications(events, modifications):
         if action == "cancel":
             events.loc[mask, "status"] = "cancelled"
         elif action in {"amend", "confirm"}:
-            if modification.get("new_amount") is not None:
-                events.loc[mask, "amount"] = float(modification["new_amount"])
-            if modification.get("new_date"):
-                events.loc[mask, "event_date"] = pd.to_datetime(modification["new_date"]).date()
+            new_amount = modification.get("new_amount")
+            if new_amount is not None and str(new_amount).strip().lower() not in {"", "none", "null"}:
+                try:
+                    events.loc[mask, "amount"] = float(new_amount)
+                except (TypeError, ValueError):
+                    pass
+            new_date = modification.get("new_date")
+            if new_date and str(new_date).strip().lower() not in {"none", "null"}:
+                try:
+                    events.loc[mask, "event_date"] = pd.to_datetime(new_date).date()
+                except (TypeError, ValueError):
+                    pass
     return events
 
 

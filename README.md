@@ -16,6 +16,8 @@ A recommendation is safe only if the user can complete the full payment plan, co
 
 Read [`problem_statement.md`](./problem_statement.md) for the full task spec, input/output schema, allowed values, conflict-resolution rules, and submission format.
 
+For the implementation design, data flow, module responsibilities, evidence handling, and submission checklist, see [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+
 ---
 
 ## Quick Start
@@ -29,6 +31,17 @@ cd hackerrank-orchestrate-september26
 
 Build your solution in `code/main.py`, or use another language and document its entry point clearly.
 
+The implemented agent:
+
+- reconstructs each user's financial state from the supplied CSV files
+- fills blank event amounts from linked image OCR before forecasting
+- converts foreign-currency events using the supplied dated exchange rates
+- forecasts cash flow for 90 days while protecting essential spending and the minimum balance
+- evaluates full payment, partial payment, installments, waiting, and rejection
+- extracts explicit message amendments with local Ollama `llama3.2`
+- uses Google Cloud Vision OCR for image-linked missing amounts
+- keeps the deterministic financial engine authoritative over OCR and Llama evidence
+
 Your solution must:
 
 - Read the input files from `dataset/`
@@ -41,9 +54,17 @@ Run the starter Python entry point with:
 python3 code/main.py
 ```
 
-### Optional Google Cloud Vision OCR
+On Windows PowerShell, use:
 
-When an event amount is blank and linked to an image, the program uses Google Cloud Vision once and stores successful results in `image_ocr_cache.json`. Later runs reuse the cache without calling Vision again. Authenticate with Application Default Credentials, install `google-cloud-vision`, and run `python code/main.py`:
+```powershell
+python code/main.py
+```
+
+The command reads `dataset/`, processes every request in `dataset/requests.csv`, writes predictions to the root `output.csv`, and writes the usage summary to `code/evaluation/usage_report.md`.
+
+### Google Cloud Vision OCR
+
+When an event amount is blank and linked to an image, the program uses Google Cloud Vision and stores successful results in `image_ocr_cache.json`. Later runs reuse the cache without calling Vision again. OCR only supplies evidence; the deterministic financial engine still decides whether the request is safe. Authenticate with Application Default Credentials, install `google-cloud-vision`, and run:
 
 ```powershell
 gcloud auth application-default login
@@ -52,11 +73,11 @@ python code/main.py
 
 The code uses `vision.ImageAnnotatorClient()` directly, so no JSON key path is required in the source code. `GOOGLE_APPLICATION_CREDENTIALS` remains supported by the Google client for service-account deployments.
 
-Message interpretation and LLM explanations are disabled by default to protect quota. The financial decision remains deterministic. Enable them only when needed with `ENABLE_LLM_MESSAGES=1` and/or `ENABLE_LLM_EXPLANATIONS=1`; cache those results before a final quota-limited run.
+The final configured pipeline uses Ollama for message interpretation. It extracts explicit event changes and never decides affordability. The financial decision remains deterministic.
 
 ### Local message parsing with Ollama
 
-Message extraction can use a local Ollama model without sending messages to a cloud API. Start Ollama and pull one model:
+Message extraction uses a local Ollama model without sending messages to a cloud API. Start Ollama and pull one model:
 
 ```powershell
 ollama pull llama3.2
@@ -109,6 +130,8 @@ The blank template at `dataset/output.csv` is provided as a reference. Your fina
     └── media/
         └── images/
 ```
+
+    See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the complete runtime flow and module responsibilities.
 
 Only `dataset/requests.csv` requires predictions. Everything else is context. Join user records with `user_id`, request records with `request_id`, supporting evidence with `related_event_id`, and exchange rates with the rate date and currency pair.
 

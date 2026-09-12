@@ -642,3 +642,62 @@ repo_root=C:\Users\anilk\OneDrive\Desktop\hackerrank-orchestrate-september26
 worktree=main
 parent_agent=none
 
+## [2026-09-12T23:57:19.7272110+05:30] Add architecture and improve README
+User Prompt (verbatim, secrets redacted):
+create good architecture .md and update Readme .md clearly and wth enaging and understandable Readme clearly
+
+Agent Response Summary:
+Created ARCHITECTURE.md with the real runtime flow, module responsibilities, data contracts, decision rules, OCR and Ollama boundaries, caching, run modes, and submission checklist. Updated README.md with an architecture link, implementation overview, Windows and Unix run commands, and clear evidence-versus-decision behavior.
+
+Actions:
+* Created ARCHITECTURE.md
+* Updated README.md
+* Compiled all runtime Python modules successfully
+* Diagnostics reported no errors in main.py and tracker.py
+
+Context:
+tool=GitHub Copilot
+branch=unknown
+repo_root=C:\Users\anilk\OneDrive\Desktop\hackerrank-orchestrate-september26
+worktree=main
+parent_agent=none
+
+## [2026-09-12T23:59:39.1039839+05:30] Verify Vision and Ollama usage
+User Prompt (verbatim, secrets redacted):
+Are we using google vision api and llama or not?
+
+Agent Response Summary:
+Verified that Google Cloud Vision evidence is used through VisionOCR and its populated cache, while the final run made zero Ollama calls. The local Ollama path exists but is gated by availability; ENABLE_LLM_MESSAGES alone does not force a call.
+
+Actions:
+* Read usage_report.md
+* Inspected main.py integration points
+
+Context:
+tool=GitHub Copilot
+branch=unknown
+repo_root=C:\Users\anilk\OneDrive\Desktop\hackerrank-orchestrate-september26
+worktree=main
+parent_agent=none
+
+## [2026-09-13T00:30:37.2037379+05:30] Complete Llama-enabled pipeline run
+User Prompt (verbatim, secrets redacted):
+do it
+
+Agent Response Summary:
+Integrated Ollama llama3.2 token tracking, optimized message context, handled null-like Llama fields safely, and completed the full 250-request run. The run produced a complete Llama-generated output with 250 rows, 250 unique request IDs, zero missing IDs, and zero safe-amount bound violations. Google Vision OCR remained active for image evidence.
+
+Actions:
+* Edited code/main.py, code/local_message_parser.py, code/evaluation/tracker.py
+* Ran full pipeline with ENABLE_LOCAL_MESSAGES=1 and LOCAL_LLM_MODEL=llama3.2
+* Promoted output.csv.tmp to output.csv after Windows lock release
+* Updated usage_report.md, README.md, and ARCHITECTURE.md
+* Validated final output and diagnostics
+
+Context:
+tool=GitHub Copilot
+branch=unknown
+repo_root=C:\Users\anilk\OneDrive\Desktop\hackerrank-orchestrate-september26
+worktree=main
+parent_agent=none
+

@@ -1,6 +1,6 @@
 # HackerRank Orchestrate
 
-Starter repository for the **HackerRank Orchestrate** 24-hour hackathon (September 2026).
+Repository for the **HackerRank Orchestrate** 24-hour hackathon (September 2026).
 
 ## Buy or Wait?
 

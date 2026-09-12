@@ -1,5 +1,0 @@
-pandas
-pydantic
-pillow
-google-genai
-google-cloud-vision

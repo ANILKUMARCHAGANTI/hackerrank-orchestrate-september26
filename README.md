@@ -41,6 +41,37 @@ Run the starter Python entry point with:
 python3 code/main.py
 ```
 
+### Optional Google Cloud Vision OCR
+
+When an event amount is blank and linked to an image, the program uses Google Cloud Vision once and stores successful results in `image_ocr_cache.json`. Later runs reuse the cache without calling Vision again. Authenticate with Application Default Credentials, install `google-cloud-vision`, and run `python code/main.py`:
+
+```powershell
+gcloud auth application-default login
+python code/main.py
+```
+
+The code uses `vision.ImageAnnotatorClient()` directly, so no JSON key path is required in the source code. `GOOGLE_APPLICATION_CREDENTIALS` remains supported by the Google client for service-account deployments.
+
+Message interpretation and LLM explanations are disabled by default to protect quota. The financial decision remains deterministic. Enable them only when needed with `ENABLE_LLM_MESSAGES=1` and/or `ENABLE_LLM_EXPLANATIONS=1`; cache those results before a final quota-limited run.
+
+### Local message parsing with Ollama
+
+Message extraction can use a local Ollama model without sending messages to a cloud API. Start Ollama and pull one model:
+
+```powershell
+ollama pull llama3.2
+# or: ollama pull qwen2.5:7b
+```
+
+Then run with:
+
+```powershell
+$env:LOCAL_LLM_MODEL="llama3.2"
+python code/main.py
+```
+
+Use `LOCAL_LLM_MODEL="qwen2.5:7b"` for Qwen. Parsed modifications are cached in `message_parser_cache.json`; the local model never decides affordability or payment plans.
+
 After running your solution, confirm that `output.csv` exists in the repository root and contains the required columns and one row for every request.
 
 ## Important File Locations

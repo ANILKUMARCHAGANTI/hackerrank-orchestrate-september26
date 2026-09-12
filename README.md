@@ -25,8 +25,6 @@ For each row in `dataset/requests.csv`, the agent:
 9. Validates the result and writes one row to the root `output.csv`.
 
 ## Architecture
-
-<<<<<<< HEAD
 ```mermaid
 flowchart TD
     A[Challenge CSV files] --> B[DataLoader]

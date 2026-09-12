@@ -1,54 +1,169 @@
-# HackerRank Orchestrate
+# Buy or Wait? Financial Decision Agent
 
-Repository for the **HackerRank Orchestrate** 24-hour hackathon (September 2026).
+An AI-assisted financial decision agent built for the **HackerRank Orchestrate** hackathon.
 
-## Buy or Wait?
+The agent answers a practical question for every request in the challenge dataset:
 
-Build an AI-powered financial agent that decides whether a user can safely afford a requested expense.
+> Can this user safely make this payment, and what is the safest way to complete it?
 
-A user may ask: **"Can I afford this laptop?"**
+It reconstructs each user's financial state, reads supporting evidence from receipt images and messages, forecasts the next 90 days, and recommends whether to pay in full, pay partially, use installments, wait, or avoid the transaction.
 
-Answering well takes more than the current balance. The agent must account for recurring expenses, pending payments, essential spending, confirmed income, available payment options, and relevant details buried in messages and images.
+The final financial decision is deterministic and rule-based. Google Cloud Vision and local Ollama `llama3.2` provide structured evidence; they never override the financial safety rules.
 
-For every request, the agent decides whether the user should pay in full, pay partially, use installments, wait, or not proceed. The recommendation must be personalized: two users with the same balance can deserve different answers based on their commitments, priorities, payment preferences, and willingness to adjust flexible expenses.
+## What This Project Does
 
-A recommendation is safe only if the user can complete the full payment plan, cover essential expenses, and stay above their preferred minimum balance throughout the forecast period.
+For each row in `dataset/requests.csv`, the agent:
 
-Read [`problem_statement.md`](./problem_statement.md) for the full task spec, input/output schema, allowed values, conflict-resolution rules, and submission format.
+1. Loads the user's profile, balance, priorities, protected spending, and payment preferences.
+2. Reconstructs the user's ledger from financial events.
+3. Uses Google Cloud Vision OCR to recover amounts missing from linked images.
+4. Uses local Ollama `llama3.2` to extract explicit cancellations, amendments, or confirmations from relevant messages.
+5. Converts foreign-currency events using the supplied dated exchange rates.
+6. Forecasts cash flow for 90 days.
+7. Tests full payment, partial payment, installment, wait, and rejection candidates.
+8. Rejects any plan that breaches the minimum balance, misses the deadline, violates preferences, or conflicts with supplied payment options.
+9. Validates the result and writes one row to the root `output.csv`.
 
-For the implementation design, data flow, module responsibilities, evidence handling, and submission checklist, see [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+## Architecture
 
----
-
-## Quick Start
-
-Clone the repository and move into the project directory:
-
-```bash
-git clone https://github.com/interviewstreet/hackerrank-orchestrate-september26.git
-cd hackerrank-orchestrate-september26
+<<<<<<< HEAD
+```mermaid
+flowchart TD
+    A[Challenge CSV files] --> B[DataLoader]
+    I[Linked images] --> J[Google Cloud Vision OCR]
+    J --> K[image_ocr_cache.json]
+    K --> B
+    M[Relevant messages] --> N[Ollama llama3.2]
+    N --> O[Structured event changes]
+    B --> C[Normalized financial state]
+    O --> C
+    C --> D[90-day Forecaster]
+    D --> E[DecisionEngine]
+    E --> F[Deterministic validation]
+    F --> G[output.csv]
+    E --> H[usage_report.md]
 ```
 
-Build your solution in `code/main.py`, or use another language and document its entry point clearly.
+Read [`ARCHITECTURE.md`](ARCHITECTURE.md) for the detailed module-by-module design.
 
-The implemented agent:
+### Authoritative layer
 
-- reconstructs each user's financial state from the supplied CSV files
-- fills blank event amounts from linked image OCR before forecasting
-- converts foreign-currency events using the supplied dated exchange rates
-- forecasts cash flow for 90 days while protecting essential spending and the minimum balance
-- evaluates full payment, partial payment, installments, waiting, and rejection
-- extracts explicit message amendments with local Ollama `llama3.2`
-- uses Google Cloud Vision OCR for image-linked missing amounts
-- keeps the deterministic financial engine authoritative over OCR and Llama evidence
+The deterministic financial engine is the authority. It decides affordability, calculates safe amounts, builds payment plans, and validates the final output.
 
-Your solution must:
+### Evidence layer
 
-- Read the input files from `dataset/`
-- Generate one prediction for every request
-- Write the final predictions to `output.csv` in the repository root
+- **Google Cloud Vision OCR** extracts missing amounts from linked payroll slips, bills, receipts, and statements.
+- **Ollama `llama3.2`** extracts only explicit message facts such as `cancel`, `amend`, and `confirm` actions.
 
-Run the starter Python entry point with:
+Neither model is allowed to invent income, create payment options, or make the final affordability decision.
+
+## Repository Structure
+
+```text
+.
+├── README.md                         # This guide
+├── ARCHITECTURE.md                   # Detailed architecture and data flow
+├── problem_statement.md              # HackerRank challenge specification
+├── Planning.md                       # Original implementation plan
+├── code/
+│   ├── main.py                       # End-to-end entry point
+│   ├── config.py                     # Paths and output schema
+│   ├── data_loader.py                # CSV loading, OCR filling, currency conversion
+│   ├── vision_ocr.py                 # Google Vision OCR and JSON cache
+│   ├── local_message_parser.py       # Ollama message extraction and cache
+│   ├── forecaster.py                 # 90-day cash-flow simulation
+│   ├── decision_engine.py             # Candidate generation and ranking
+│   ├── utils.py                      # Date and utility helpers
+│   └── evaluation/
+│       ├── tracker.py                # Usage-report generation
+│       └── usage_report.md           # Final run usage summary
+├── dataset/                          # Challenge inputs
+├── image_ocr_cache.json              # Successful OCR results
+├── message_parser_cache.json         # Cached Ollama message results
+├── output.csv                        # Final predictions
+└── output_llama.csv                  # Preserved Llama-run output, when created
+```
+
+## Input Data
+
+The agent reads the supplied files from `dataset/`:
+
+| File | Purpose |
+|---|---|
+| `requests.csv` | Requests requiring predictions |
+| `financial_profiles.csv` | User balances, minimum reserves, priorities, and preferences |
+| `financial_events.csv` | Historical, pending, scheduled, settled, and non-cash events |
+| `request_payment_options.csv` | Full-payment and installment options supplied by sellers/providers |
+| `exchange_rates.csv` | Fixed date-specific currency conversion rates |
+| `messages.csv` | Supporting messages linked to users, requests, or events |
+| `images.csv` | Links image files to requests and financial events |
+| `media/images/` | Receipt, bill, statement, and payroll images |
+| `sample_requests.csv` | Public examples for understanding the output format |
+
+`sample_requests.csv` is reference material, not evaluation labels. Organizer-only files are not used.
+
+## Output Contract
+
+The agent writes `output.csv` in the repository root with exactly these columns:
+
+```text
+request_id,amount_safe_to_pay,affordability_status,recommended_payment_method,payment_plan,earliest_date_for_full_payment,spending_changes_needed,decision_explanation
+```
+
+Allowed `affordability_status` values:
+
+```text
+affordable_now
+affordable_with_plan
+affordable_later
+not_affordable
+```
+
+Allowed `recommended_payment_method` values:
+
+```text
+full_payment
+partial_payment
+installments
+wait
+not_recommended
+```
+
+Important output rules:
+
+- `amount_safe_to_pay` must be between `0` and `requested_amount`.
+- `payment_plan` uses chronological `YYYY-MM-DD:amount` entries joined with `|`, or `none`.
+- An installment plan must match a supplied payment option.
+- A partial-payment plan must contain exactly two payments and add up to the full requested amount.
+- `earliest_date_for_full_payment` is empty when no safe full-payment date exists in the forecast.
+- Spending changes may target only permitted flexible recurring expenses.
+- There must be exactly one output row for every request ID.
+
+## Financial Decision Logic
+
+The forecast protects the user's financial position by:
+
+- keeping the balance at or above `minimum_balance_to_keep`
+- reserving pending and scheduled debits
+- counting confirmed income only on its settlement date
+- excluding pending credits and unrealized investment value
+- ignoring failed and cancelled events
+- using supported history to infer recurring obligations
+- respecting protected categories and payment preferences
+- requiring eligible plans to complete by `desired_completion_date`
+
+Safe candidates are ranked by the challenge priorities: deadline completion, avoiding spending changes, lower total cost, earlier start, fewer payments, and payment-option tie-breaker.
+
+## Setup
+
+Requirements:
+
+- Python 3.10 or newer
+- Python packages used by the project, including `pandas`
+- Google Cloud Vision SDK and credentials for live OCR calls
+- Ollama with a local model for message extraction
+
+Install the Python dependencies available in your environment, for example:
 
 ```powershell
 python -m pip install pandas google-cloud-vision
@@ -117,20 +232,27 @@ The message parser:
 
 Qwen can be used by changing `LOCAL_LLM_MODEL` to an installed Ollama model, but the documented configuration uses `llama3.2`.
 
-## Important File Locations
+## Caches and Reports
 
-```text
-dataset/        Input data and the blank output template. Do not modify the input data.
-code/           Your solution code.
-output.csv      Final generated predictions in the repository root.
-code.zip        ZIP file containing your complete solution for submission.
+| File | Meaning |
+|---|---|
+| `image_ocr_cache.json` | Cached Google Vision text and extracted amounts |
+| `message_parser_cache.json` | Cached Ollama message modifications |
+| `output.csv` | Final prediction file required by the challenge |
+| `code/evaluation/usage_report.md` | Provider, call, token, and cost summary |
+| `log.txt` | Development transcript required by repository instructions |
+
+The usage report distinguishes model calls from deterministic processing. Google Vision OCR is reported as evidence extraction because its API does not expose LLM token counts. Ollama usage is reported by model when provider counters are available; cached runs without persisted provider counters are explicitly marked as estimated.
+
+## Verification
+
+After a run, check the output shape:
+
+```powershell
+python -c "import pandas as pd; d=pd.read_csv('output.csv'); print(len(d)); print(d.columns.tolist())"
 ```
 
-The blank template at `dataset/output.csv` is provided as a reference. Your final generated file must be the root-level `output.csv`.
-
----
-
-## Repository Layout
+For the current dataset, the expected result is:
 
 ```text
 250 rows

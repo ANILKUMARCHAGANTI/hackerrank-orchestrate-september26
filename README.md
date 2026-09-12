@@ -20,33 +20,7 @@ For the implementation design, data flow, module responsibilities, evidence hand
 
 ---
 
-## Quick Start
 
-Clone the repository and move into the project directory:
-
-```bash
-git clone https://github.com/interviewstreet/hackerrank-orchestrate-september26.git
-cd hackerrank-orchestrate-september26
-```
-
-Build your solution in `code/main.py`, or use another language and document its entry point clearly.
-
-The implemented agent:
-
-- reconstructs each user's financial state from the supplied CSV files
-- fills blank event amounts from linked image OCR before forecasting
-- converts foreign-currency events using the supplied dated exchange rates
-- forecasts cash flow for 90 days while protecting essential spending and the minimum balance
-- evaluates full payment, partial payment, installments, waiting, and rejection
-- extracts explicit message amendments with local Ollama `llama3.2`
-- uses Google Cloud Vision OCR for image-linked missing amounts
-- keeps the deterministic financial engine authoritative over OCR and Llama evidence
-
-Your solution must:
-
-- Read the input files from `dataset/`
-- Generate one prediction for every request
-- Write the final predictions to `output.csv` in the repository root
 
 Run the starter Python entry point with:
 
@@ -107,6 +81,24 @@ code.zip        ZIP file containing your complete solution for submission.
 The blank template at `dataset/output.csv` is provided as a reference. Your final generated file must be the root-level `output.csv`.
 
 ---
+## 2. High-Level Flow
+
+```mermaid
+flowchart TD
+    A[CSV files in dataset/] --> B[DataLoader]
+    I[Linked receipt or statement images] --> J[VisionOCR]
+    J --> K[image_ocr_cache.json]
+    K --> B
+    M[Relevant messages] --> N[Optional Ollama parser]
+    N --> O[Structured event modifications]
+    B --> C[Normalized profiles events rates options]
+    C --> D[Forecaster]
+    O --> D
+    D --> E[DecisionEngine]
+    E --> F[Validation]
+    F --> G[output.csv]
+    E --> H[usage_report.md]
+```
 
 ## Repository Layout
 
